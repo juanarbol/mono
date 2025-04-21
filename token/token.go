@@ -3,15 +3,15 @@ package token
 type TokenType string
 
 type Token struct {
-	Type    TokenType
-	Literal string
+	Type    TokenType // This is handy for token flagging
+	Literal string    // This is the Literal value of that token
 }
 
 const (
 	ILLEGAL = "ILLEGAL"
 	EOF     = "EOF"
 
-	// Identifiers and literals
+	// Identifiers and literals, pretty much types
 	IDENT = "IDENT"
 	INT   = "INT"
 

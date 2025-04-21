@@ -11,7 +11,9 @@ type Lexer struct {
 
 func New(input string) *Lexer {
 	l := &Lexer{input: input}
-	l.readChar()
+
+	l.readChar() // basically set "position" and "readPosition"
+
 	return l
 }
 
@@ -87,6 +89,7 @@ func (l *Lexer) NextToken() token.Token {
 		tok.Literal = ""
 		tok.Type = token.EOF
 	default:
+		// Pretty much look for identifiers and numbers
 		if isLetter(l.ch) { // Handle strings
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
@@ -97,6 +100,7 @@ func (l *Lexer) NextToken() token.Token {
 			return tok
 		} else {
 			// We don't know how to handle this
+			// This is not part of our programming languaje
 			tok = newToken(token.ILLEGAL, l.ch)
 		}
 	}
@@ -114,26 +118,30 @@ func (l *Lexer) peekChar() byte {
 }
 
 func (l *Lexer) skipWhiteSpace() {
+	// Pretty much ignore tabs, new lines, spaces...
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		l.readChar()
 	}
 }
 
 func (l *Lexer) readIdentifier() string {
+	// Grab the current position of the "indentifier"
 	position := l.position
 	// Move the cursor til' we find a space or something
 	for isLetter(l.ch) {
 		l.readChar()
 	}
-	// Slice the whole identifier
+	// Slice the whole identifier, with the slice we get the whole word
 	return l.input[position:l.position]
 }
 
+// Look if the char is inside a-zA-Z
 func isLetter(ch byte) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
 
 func (l *Lexer) readNumber() string {
+	// Grab the initial position of the digit
 	position := l.position
 	// Move the cursor til' we find a space or something
 	for isDigit(l.ch) {
@@ -143,10 +151,12 @@ func (l *Lexer) readNumber() string {
 	return l.input[position:l.position]
 }
 
+// Basically check if the char is inside 0-9
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
 }
 
+// Instiantiate a token
 func newToken(tokenType token.TokenType, ch byte) token.Token {
 	return token.Token{Type: tokenType, Literal: string(ch)}
 }

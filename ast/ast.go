@@ -19,7 +19,7 @@ type Statement interface {
 	statementNode()
 }
 
-// NOTE: some expressions can output values
+// NOTE: some expressions can output values, some not
 type Expression interface {
 	Node
 	expressionNode()
@@ -60,8 +60,8 @@ func (i *Identifier) String() string       { return i.Value }
 
 type LetStatement struct {
 	Token token.Token // the token.LET token
-	Name  *Identifier
-	Value Expression
+	Name  *Identifier // Name of the identifier
+	Value Expression  // The holding expression for the value?
 }
 
 func (ls *LetStatement) statementNode()       {}
@@ -83,7 +83,7 @@ func (ls *LetStatement) String() string {
 
 type ReturnStatement struct {
 	Token       token.Token // the token.RETURN token
-	ReturnValue Expression
+	ReturnValue Expression  // The expression holding the return value
 }
 
 func (rs *ReturnStatement) statementNode()       {}
@@ -103,7 +103,7 @@ func (rs *ReturnStatement) String() string {
 
 type ExpressionStatement struct {
 	Token      token.Token // the token.RETURN token
-	Expression Expression
+	Expression Expression  // the Expression
 }
 
 func (es *ExpressionStatement) statementNode()       {}
