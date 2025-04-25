@@ -5,6 +5,7 @@ import (
 	"mono/ast"
 	"mono/lexer"
 	"mono/token"
+	"strconv"
 )
 
 // This is our hierarchy in our parser
@@ -43,6 +44,7 @@ func New(l *lexer.Lexer) *Parser {
 	// FOR PRATT PARSER, DELETE THIS COMMENT LATER
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 
 	return p
 }
@@ -141,6 +143,22 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	leftExp := prefix()
 
 	return leftExp
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	lit := &ast.IntegerLiteral{Token: p.curToken}
+
+	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	// Set the value
+	lit.Value = value
+
+	return lit
 }
 
 // TODO: this is part of the PRATT parser
