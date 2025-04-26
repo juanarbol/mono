@@ -69,6 +69,8 @@ func New(l *lexer.Lexer) *Parser {
 	// Handle booleans
 	p.registerPrefix(token.TRUE, p.parseBooleanLiteral)
 	p.registerPrefix(token.FALSE, p.parseBooleanLiteral)
+	// Handle "grouped" expressions
+	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 
 	// REGISTER INFIX PARSER FUNCTIONS
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
@@ -255,6 +257,21 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 
 	return leftExp
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+	// ignore the '('
+	p.nextToken()
+
+	// Parse a expression normally
+	exp := p.parseExpression(LOWEST)
+
+	// after the expression is parsed, it should be a ')' in the peekToken
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	return exp
 }
 
 func (p *Parser) parseBooleanLiteral() ast.Expression {
