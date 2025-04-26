@@ -9,6 +9,7 @@ import (
 )
 
 // This is our hierarchy in our parser
+// This works kind of an enun in C -or something-
 const (
 	_ int = iota
 	LOWEST
@@ -32,6 +33,12 @@ var precedences = map[token.TokenType]int{
 	token.ASTERISK: PRODUCT,
 }
 
+type (
+	// The arg is the left side of the expression
+	infixParseFn  func(ast.Expression) ast.Expression
+	prefixParseFn func() ast.Expression
+)
+
 // This is the Parser main class
 type Parser struct {
 	l *lexer.Lexer // The lexer will help us with the tokens and stuff
@@ -52,15 +59,18 @@ func New(l *lexer.Lexer) *Parser {
 	p.nextToken()
 	p.nextToken()
 
-	// Register infix and prefix parser functions
-	// FOR PRATT PARSER, DELETE THIS COMMENT LATER
+	// REGISTER PREFIX PARSER FUNCTIONS
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
-	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
+	// Handle numbers
+	p.registerPrefix(token.INT, p.parseIntegerLiteral)
+	// Handle booleans
+	p.registerPrefix(token.TRUE, p.parseBooleanLiteral)
+	p.registerPrefix(token.FALSE, p.parseBooleanLiteral)
 
-	// INFLIX PARSER
+	// REGISTER INFIX PARSER FUNCTIONS
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
@@ -72,6 +82,16 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.GT, p.parseInfixExpression)
 
 	return p
+}
+
+// This function will register the prefix function parser
+func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
+// This function will register the infix function parser
+func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
+	p.infixParseFns[tokenType] = fn
 }
 
 func (p *Parser) noPrefixParseFnError(t token.TokenType) {
@@ -210,7 +230,6 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expression
 }
 
-// This is WHERE HELL GOES ON, I STILL HAVE NO IDEA ABOUT THIS
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
@@ -221,6 +240,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	// Call the bounded function
 	leftExp := prefix()
 
+	// My dude, this is the WHOLE THING, please debug and read more carefully
 	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
@@ -235,6 +255,10 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 
 	return leftExp
+}
+
+func (p *Parser) parseBooleanLiteral() ast.Expression {
+	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
 }
 
 func (p *Parser) parseIntegerLiteral() ast.Expression {
@@ -253,7 +277,6 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	return lit
 }
 
-// TODO: this is part of the PRATT parser
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 
@@ -303,21 +326,4 @@ func (p *Parser) ParseProgram() *ast.Program {
 	}
 
 	return program
-}
-
-// PRATT PARSER
-type (
-	prefixParseFn func() ast.Expression
-	// The arg is the left side of the expression
-	infixParseFn func(ast.Expression) ast.Expression
-)
-
-// This function will register the prefix function parser
-func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
-	p.prefixParseFns[tokenType] = fn
-}
-
-// This function will register the infix function parser
-func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
-	p.infixParseFns[tokenType] = fn
 }
