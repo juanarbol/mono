@@ -20,6 +20,18 @@ const (
 	CALL        // myFunc(x)
 )
 
+// Just map tokens to precedences
+var precedences = map[token.TokenType]int{
+	token.EQ:       EQUALS,
+	token.NOT_EQ:   EQUALS,
+	token.GT:       LESSGREATER,
+	token.LT:       LESSGREATER,
+	token.PLUS:     SUM,
+	token.MINUS:    SUM,
+	token.SLASH:    PRODUCT,
+	token.ASTERISK: PRODUCT,
+}
+
 // This is the Parser main class
 type Parser struct {
 	l *lexer.Lexer // The lexer will help us with the tokens and stuff
@@ -48,6 +60,17 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 
+	// INFLIX PARSER
+	p.infixParseFns = make(map[token.TokenType]infixParseFn)
+	p.registerInfix(token.PLUS, p.parseInfixExpression)
+	p.registerInfix(token.MINUS, p.parseInfixExpression)
+	p.registerInfix(token.SLASH, p.parseInfixExpression)
+	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
+	p.registerInfix(token.EQ, p.parseInfixExpression)
+	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
+	p.registerInfix(token.LT, p.parseInfixExpression)
+	p.registerInfix(token.GT, p.parseInfixExpression)
+
 	return p
 }
 
@@ -59,6 +82,22 @@ func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 // Getter of the parser errors
 func (p *Parser) Errors() []string {
 	return p.errors
+}
+
+// Getter of the peek precedence
+func (p *Parser) peekPrecedence() int {
+	if p, ok := precedences[p.peekToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+// Getter of the current precedence
+func (p *Parser) currentPrecedence() int {
+	if p, ok := precedences[p.curToken.Type]; ok {
+		return p
+	}
+	return LOWEST
 }
 
 // Setter of the last error encountered in the parsing process
@@ -154,6 +193,23 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	return expression
 }
 
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	expression := &ast.InfixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     left,
+	}
+
+	// Get our current precedence to make sure that hierachies are being respected
+	precedence := p.currentPrecedence()
+	// Move on
+	p.nextToken()
+	// The right side must be parsed with the current precedence
+	expression.Right = p.parseExpression(precedence)
+
+	return expression
+}
+
 // This is WHERE HELL GOES ON, I STILL HAVE NO IDEA ABOUT THIS
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
@@ -162,7 +218,21 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		return nil
 	}
 
+	// Call the bounded function
 	leftExp := prefix()
+
+	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
+		infix := p.infixParseFns[p.peekToken.Type]
+		if infix == nil {
+			return leftExp
+		}
+
+		// Move on, continue
+		p.nextToken()
+
+		// Call the bounded function to the infix parser
+		leftExp = infix(leftExp)
+	}
 
 	return leftExp
 }
