@@ -71,6 +71,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBooleanLiteral)
 	// Handle "grouped" expressions
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
+	// Handle "if" expressions
+	p.registerPrefix(token.IF, p.parseIfExpression)
 
 	// REGISTER INFIX PARSER FUNCTIONS
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
@@ -257,6 +259,63 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 
 	return leftExp
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	block := &ast.BlockStatement{Token: p.curToken}
+	block.Statements = []ast.Statement{}
+
+	// Move from {
+	p.nextToken()
+
+	// Iterate over the whole block and handle early EOF
+	for !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
+		// Literally parse the "body", any other valid "program"
+		stmt := p.parseStatement()
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
+		}
+		p.nextToken()
+	}
+
+	return block
+}
+
+func (p *Parser) parseIfExpression() ast.Expression {
+	expression := &ast.IfExpression{Token: p.curToken}
+
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	// Move from the '('
+	p.nextToken()
+
+	expression.Condition = p.parseExpression(LOWEST)
+
+	// ExpectPeek will call a p.nextToken, so, no worries
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	// THIS IS INCREDIBLE
+	expression.Consequence = p.parseBlockStatement()
+
+	if p.peekTokenIs(token.ELSE) {
+		p.nextToken() // move on
+
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
+
+		expression.Alternative = p.parseBlockStatement()
+	}
+
+	return expression
 }
 
 func (p *Parser) parseGroupedExpression() ast.Expression {
