@@ -9,7 +9,7 @@ import (
 )
 
 // TODO: add version as python does
-const PROMPT = "(mono) >>"
+const PROMPT = "(mono, write '.exit' to exit) >>"
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
@@ -25,6 +25,9 @@ func Start(in io.Reader, out io.Writer) {
 
 		// Read line from stdin
 		line := scanner.Text()
+		if line == ".exit" {
+			break
+		}
 		// Lex that line from stdin
 		l := lexer.New(line)
 		p := parser.New(l)
