@@ -55,7 +55,6 @@ func TestReturnStatements(t *testing.T) {
 
 	program := p.ParseProgram()
 	checkParseErrors(t, p)
-
 	if program == nil {
 		t.Fatalf("ParseProgram() returned nil")
 	}
@@ -487,6 +486,82 @@ func testIdentifier(t *testing.T, exp ast.Expression, value string) bool {
 	}
 
 	return true
+}
+
+func ParseFunctionLiteralParsing(t *testing.T) {
+	input := `fn (x,y) { x + y; }`
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParseErrors(t, p)
+	if program == nil {
+		t.Fatalf("ParseProgram() returned nil")
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("The program does not contain one statements got=%d",
+			len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("stmt not *ast.ExpressionStatement. got=%T", program.Statements[0])
+	}
+
+	function, ok := stmt.Expression.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("stmt.Expression not *ast.FunctionLiteral. got=%T", stmt.Expression)
+	}
+
+	if len(function.Parameters) != 2 {
+		t.Fatalf("expected strictly 2 params. got=%d", len(function.Parameters))
+	}
+
+	testLiteralExpression(t, function.Parameters[0], "x")
+	testLiteralExpression(t, function.Parameters[1], "y")
+
+	if len(function.Body.Statements) != 1 {
+		t.Fatalf("expected strictly 1 body. got=%d", len(function.Body.Statements))
+	}
+
+	bodyStmt, ok := function.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("function.Body.Statements[0] not *ast.ExpressionStatement. got=%T", function.Body.Statements[0])
+	}
+
+	testInfixExpression(t, bodyStmt.Expression, "x", "+", "y")
+}
+
+func TestFunctionParamsParsing(t *testing.T) {
+	tests := []struct {
+		input           string
+		expexctedParams []string
+	}{
+		{input: "fn() {}", expexctedParams: []string{}},
+		{input: "fn(x) {}", expexctedParams: []string{"x"}},
+		// { input: "fn(x, y, z) {}", expexctedParams: []string{"x", "y", "z"}},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+
+		program := p.ParseProgram()
+		checkParseErrors(t, p)
+
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+		function := stmt.Expression.(*ast.FunctionLiteral)
+
+		if len(function.Parameters) != len(tt.expexctedParams) {
+			t.Errorf("got=%d. expected=%d", len(function.Parameters), len(tt.expexctedParams))
+		}
+
+		for i, ident := range tt.expexctedParams {
+			testLiteralExpression(t, function.Parameters[i], ident)
+		}
+	}
 }
 
 func ParseIfExpression(t *testing.T) {
