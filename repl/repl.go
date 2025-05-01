@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"mono/evaluator"
 	"mono/lexer"
 	"mono/parser"
 )
 
 // TODO: add version as python does
-const PROMPT = "(mono, write '.exit' to exit) >>"
+const PROMPT = "(mono, write '.exit' to exit) >> "
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
@@ -38,8 +39,11 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		}
 	}
 }
 
