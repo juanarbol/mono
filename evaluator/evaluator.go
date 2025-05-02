@@ -174,20 +174,6 @@ func evalBangOperator(right object.Object) object.Object {
 	}
 }
 
-func evalStatements(stmts []ast.Statement) object.Object {
-	var result object.Object
-
-	for _, stmt := range stmts {
-		result = Eval(stmt)
-
-		if returnValue, ok := result.(*object.ReturnValue); ok {
-			return returnValue.Value
-		}
-	}
-
-	return result
-}
-
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
 	if input {
 		return TRUE
