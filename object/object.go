@@ -9,12 +9,20 @@ const (
 	BOOLEAN_OBJ      = "BOOLEAN"
 	NULL_OBJ         = "NULL"
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
+	ERROR_OBJ        = "ERROR"
 )
 
 type Object interface {
 	Inspect() string
 	Type() ObjectType
 }
+
+type Error struct {
+	Message string
+}
+
+func (er *Error) Inspect() string  { return "ERROR: " + er.Message }
+func (er *Error) Type() ObjectType { return ERROR_OBJ }
 
 type ReturnValue struct {
 	Value Object
